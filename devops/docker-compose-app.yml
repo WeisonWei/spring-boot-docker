@@ -1,0 +1,19 @@
+version: "3"
+services:
+
+  springboot-docker:
+    image: ${DOCKER_REGISTRY}/springboot-docker:${APP_VERSION}
+    #env_file:
+      #- ../ai-env/environment
+      #- ../ai-env/environment-${ENV}
+    ports:
+      - 8080:8080
+    networks:
+      - app-local
+    extra_hosts:
+      - "discovery:127.0.0.1"
+    restart: always
+
+networks:
+  app-local:
+    external: true

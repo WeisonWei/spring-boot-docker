@@ -1,0 +1,23 @@
+version: "3"
+services:
+
+  springboot-docker:
+    image: ${DOCKER_REGISTRY}/springboot-docker:${APP_VERSION}
+    #env_file:
+    #  - ../ai-env/environment
+    #  - ../ai-env/environment-${AI_CLOUD_ENV}
+    ports:
+      - 8080:8080
+    networks:
+      - app-local
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 1024M
+
+networks:
+  app-local:
