@@ -13,11 +13,6 @@ management:
 
 spring:
   redis:
-    url: ${AI_CLOUD_REDIS_URL:redis://localhost:6379}
-    database: ${AI_CLOUD_REDIS_DATABASE:0}
-  cache:
-    type: redis
-    cache-names: account
-    redis:
-      cache-null-values: false
-      time-to-live: 3600000
+    url: ${REDIS_URL:redis://localhost:6379}
+    database: ${REDIS_DATABASE:0}
+
