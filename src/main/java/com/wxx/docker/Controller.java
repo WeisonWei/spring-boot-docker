@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -17,8 +18,8 @@ import java.util.concurrent.locks.ReentrantLock;
 @Slf4j
 public class Controller {
 
-    private static int num = 0;
-
+    private static volatile int NUMBER = 0;
+    private static volatile int CORE_DATA_FLAG = 0;
     private static final Lock FAIR_LOCK = new ReentrantLock(true);
     private static final Lock NON_FAIR_LOCK = new ReentrantLock();
 
@@ -30,53 +31,63 @@ public class Controller {
         return "hello";
     }
 
+    @PutMapping("/locks")
+    public String setZero() {
+        CORE_DATA_FLAG = 0;
+        return "OK";
+    }
+
     @GetMapping("/locks/n")
     public String noLock(@RequestParam String name) {
-        num = num + 1;
-        setThreadName(name + num);
-        log.info(Thread.currentThread().getName() + "NoLock:" + num);
-        return "hello";
+        NUMBER++;
+        setThreadName(name + NUMBER);
+        if (CORE_DATA_FLAG < 1) {
+            CORE_DATA_FLAG++;
+        }
+        log.info(Thread.currentThread().getName() + "noLock:" + NUMBER);
+        log.info("noLock:" + Thread.currentThread().getName() + "  num-->" + NUMBER + "  flag-->" + CORE_DATA_FLAG);
+        return "OK";
     }
 
     @GetMapping("/locks/s")
     public synchronized String synchronizedLock(@RequestParam String name) {
         long begin = System.currentTimeMillis();
-        num = num + 1;
-        setThreadName(name + num);
-        log.info(Thread.currentThread().getName() + "SynchronizedLock:" + num);
+        NUMBER++;
+        setThreadName(name + NUMBER);
+        log.info(Thread.currentThread().getName() + "synchronized:" + NUMBER);
         long end = System.currentTimeMillis();
-        return String.valueOf(num) + "cost:" + (end - begin) + "ms";
+        return String.valueOf(NUMBER) + "cost:" + (end - begin) + "ms";
     }
 
     @GetMapping("/locks/f")
-    public String reentrantLockFairLock(@RequestParam String name) throws InterruptedException {
+    public String rLockFairLock(@RequestParam String name) throws InterruptedException {
         long begin = System.currentTimeMillis();
         FAIR_LOCK.lock();
         try {
-            num = num + 1;
-            setThreadName(name + num);
-            log.info(Thread.currentThread().getName() + "ReentrantLockLock:" + num);
+            NUMBER++;
+            setThreadName(name + NUMBER);
+            log.info(Thread.currentThread().getName() + "rLockFairLock:" + NUMBER);
         } finally {
             FAIR_LOCK.unlock();
         }
         long end = System.currentTimeMillis();
-        return String.valueOf(num) + "cost:" + (end - begin) + "ms";
+        return String.valueOf(NUMBER) + "cost:" + (end - begin) + "ms";
     }
 
     @GetMapping("/locks/uf")
-    public String reentrantLockUnFairLock(@RequestParam String name) throws InterruptedException {
+    public String rLockUnFairLock(@RequestParam String name) throws InterruptedException {
         long begin = System.currentTimeMillis();
         NON_FAIR_LOCK.tryLock(2, TimeUnit.SECONDS);
         try {
-            num = num + 1;
-            setThreadName(name + num);
+            NUMBER++;
+            setThreadName(name + NUMBER);
             TimeUnit.SECONDS.sleep(3);
-            log.info(Thread.currentThread().getName() + "ReentrantLockLock:" + num);
         } finally {
             NON_FAIR_LOCK.unlock();
         }
         long end = System.currentTimeMillis();
-        return String.valueOf(num) + "cost:" + (end - begin) + "ms";
+        log.info("rLockUnFairLock:" + Thread.currentThread().getName() + "  num-->" + NUMBER + "  flag-->" + CORE_DATA_FLAG);
+        return String.valueOf(NUMBER) + "cost:" + (end - begin) + "ms";
     }
 
     @GetMapping("/locks/rl1")
@@ -87,7 +98,7 @@ public class Controller {
         boolean res = lock.tryLock(11, 11, TimeUnit.SECONDS);
         while (res) {
             try {
-                number = number + 1;
+                NUMBER++;
                 setThreadName(name + number);
                 log.info(Thread.currentThread().getName() + "lock1:" + number);
                 log.info(Thread.currentThread().getName() + "redisRLock1:" + number);
@@ -113,11 +124,11 @@ public class Controller {
         boolean res = lock.tryLock(11, 11, TimeUnit.SECONDS);
         while (res) {
             try {
-                num = num + 1;
-                setThreadName(name + num);
-                log.info(Thread.currentThread().getName() + "redisRLock2:" + num);
+                NUMBER++;
+                setThreadName(name + NUMBER);
+                log.info(Thread.currentThread().getName() + "redisRLock2:" + NUMBER);
                 TimeUnit.SECONDS.sleep(3);
-                return String.valueOf(num);
+                return String.valueOf(NUMBER);
             } finally {
                 if (lock.isHeldByCurrentThread()) {
                     lock.unlock();
@@ -127,8 +138,8 @@ public class Controller {
             }
         }
         long end = System.currentTimeMillis();
-        log.info(num + "cost:" + (end - begin) + "ms");
-        return num + "cost:" + (end - begin) + "ms";
+        log.info(NUMBER + "cost:" + (end - begin) + "ms");
+        return NUMBER + "cost:" + (end - begin) + "ms";
     }
 
     private void setThreadName(@RequestParam String name) {
