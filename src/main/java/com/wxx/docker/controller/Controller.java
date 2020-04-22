@@ -1,6 +1,7 @@
-package com.wxx.docker;
+package com.wxx.docker.controller;
 
 
+import com.wxx.docker.service.RedissonService;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -10,9 +11,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 
 @RestController
 @Slf4j
@@ -26,6 +29,9 @@ public class Controller {
     @Resource
     RedissonClient redissonClient;
 
+    @Resource
+    RedissonService redissonService;
+
     @GetMapping("/hello")
     public String hello() {
         return "hello";
@@ -33,6 +39,7 @@ public class Controller {
 
     @PutMapping("/locks")
     public String setZero() {
+        NUMBER = 0;
         CORE_DATA_FLAG = 0;
         return "OK";
     }
@@ -140,6 +147,35 @@ public class Controller {
         long end = System.currentTimeMillis();
         log.info(NUMBER + "cost:" + (end - begin) + "ms");
         return NUMBER + "cost:" + (end - begin) + "ms";
+    }
+
+    @GetMapping("/locks/rl3")
+    public String redisRLock3(@RequestParam String name) {
+        Long begin = System.currentTimeMillis();
+        //redissonService.lock(1l, name, getVoidHandle(name)); //每次获取同一把锁
+        Random random1 = new Random(1000);
+        Random random2 = new Random(1000);
+        int r = random1.nextInt(100) + random2.nextInt(100) + begin.intValue();
+
+        Object re = redissonService.lock(Long.valueOf(r), name, getVoidHandle(name, r));//每次获取一个新锁
+        //redissonService.lockException(Long.valueOf(r), name, getVoidHandle(name,r));//每次获取一个新锁
+        long end = System.currentTimeMillis();
+        log.info(NUMBER + "cost:" + (end - begin) + "ms");
+        return re + "cost:" + (end - begin) + "ms";
+    }
+
+
+    private Supplier getVoidHandle(String name, int r) {
+        return () -> {
+            NUMBER++;
+            log.info("redisRLock3: " + NUMBER + " 随机数锁: " + r);
+            try {
+                TimeUnit.SECONDS.sleep(3);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return r;
+        };
     }
 
     private void setThreadName(@RequestParam String name) {

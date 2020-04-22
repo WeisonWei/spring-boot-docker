@@ -6,5 +6,5 @@ public interface VoidHandle<T> {
      *
      * @return
      */
-    T execute();
+    T execute() throws InterruptedException;
 }
