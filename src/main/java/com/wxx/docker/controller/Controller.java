@@ -103,19 +103,40 @@ public class Controller {
         int number = 0;
         RLock lock = redissonClient.getFairLock(name);
         boolean res = lock.tryLock(11, 11, TimeUnit.SECONDS);
-        while (res) {
+        if (res) {
             try {
                 NUMBER++;
                 setThreadName(name + number);
-                log.info(Thread.currentThread().getName() + "lock1:" + number);
                 log.info(Thread.currentThread().getName() + "redisRLock1:" + number);
-                TimeUnit.SECONDS.sleep(6);
+                TimeUnit.SECONDS.sleep(1);
             } finally {
                 if (lock.isHeldByCurrentThread()) {
                     lock.unlock();
                 }
-                res = false;
-                break;
+            }
+        }
+        long end = System.currentTimeMillis();
+        log.info(number + "cost:" + (end - begin) + "ms");
+        return number + "cost:" + (end - begin) + "ms";
+        //return Thread.currentThread().getName() + "未获取锁";
+    }
+
+    @GetMapping("/locks/rl11")
+    public String redisRLock11(@RequestParam String name) throws InterruptedException {
+        long begin = System.currentTimeMillis();
+        int number = 0;
+        RLock lock = redissonClient.getFairLock(name);
+        boolean res = lock.tryLock(11, 11, TimeUnit.SECONDS);
+        if (res) {
+            try {
+                NUMBER++;
+                setThreadName(name + number);
+                log.info(Thread.currentThread().getName() + "redisRLock1:" + number);
+                TimeUnit.SECONDS.sleep(1);
+            } finally {
+                if (lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                }
             }
         }
         long end = System.currentTimeMillis();
