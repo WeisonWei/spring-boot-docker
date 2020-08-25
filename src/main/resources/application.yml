@@ -8,14 +8,3 @@ management:
       show-details: always
     shutdown:
       enabled: true
-
-spring:
-  redis:
-    url: ${REDIS_URL:redis://localhost:6379}
-    database: ${REDIS_DATABASE:0}
-
-  datasource:
-    url: ${DATASOURCE_URL:jdbc:h2:mem:demo}
-    username: ${DATASOURCE_USERNAME:sa}
-    password: ${DATASOURCE_PASSWORD:123123}
-    driver-class-name: ${DATASOURCE_DRIVER:org.h2.Driver}
